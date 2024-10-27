@@ -38,7 +38,11 @@ pub(crate) struct InnerInstruction {
 }
 impl InnerInstruction {
     pub(crate) fn adr_val(&self) -> i16 {
-        (self.adr() | (self.sign() << 15)) as i16
+        if self.sign() == 1 {
+            self.adr() as i16 * -1
+        } else {
+            self.adr() as i16
+        }
     }
 }
 
