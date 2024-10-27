@@ -20,38 +20,53 @@ impl PROC {
         }
     }
 
-    pub fn run(&mut self, mem: &mut MEM, interactive: bool) {
+    pub fn run(&mut self, mem: &mut MEM, mut interactive: bool) {
         if interactive {
             terminal::enable_raw_mode().expect("Expected enabling raw mode");
             println!("Welcome to interactive mode press 'h' for more info");
             println!("Current command is only displayed to you. It will be runned after you press 'n'");
         }
+        let mut mem_snap_c = 0;
+        let mut disable_interactive = false;
         'main: loop {
             self.IR = mem.get(self.PC);
             self.PC += 1;
             if interactive {
-                unsafe {
-                    println!("> {}: {:?} {:?} {} AC={}", self.PC, self.IR.inner.code(), self.IR.inner.adrt(), self.IR.inner.adr(), self.AC);
-                }
                 loop {
+                    unsafe {
+                        println!("> {}: {:?} {:?} {} AC={}", self.PC - 1, self.IR.inner.code(), self.IR.inner.adrt(), self.IR.inner.adr(), self.AC);
+                    }
                     let input = read_char().expect("Expected char read");
                     match input {
                         'q' => break 'main,
                         'n' => break, // continues execution
+                        'm' => {
+                            println!("  Created memory snapshot in 'mem{}.snap", mem_snap_c);
+                            mem_snap_c += 1;
+                            mem.dump_all(Some(format!("mem{}.snap", mem_snap_c)));
+                            continue;
+                        }
+                        'f' => {
+                            disable_interactive = true;
+                            break
+                        }
                         'h' => {
                             println!("h - print help message");
                             println!("q - quit interactive mode");
                             println!("n - forward program execution");
-                            println!("m - show used memory");
+                            println!("f - finish program execution without interactive mode");
                         }
                         _ => println!("Unknown command. Press 'h' for help")
                     }
+                }
+                unsafe {
+                    println!("  executing {}: {:?} {:?} {} AC={}", self.PC - 1, self.IR.inner.code(), self.IR.inner.adrt(), self.IR.inner.adr(), self.AC);
                 }
             }
             match unsafe { self.IR.inner.adrt() } {
                 crate::instruction::Adrt::DOT => self.OP = unsafe { self.IR.inner.adr_val() },
                 crate::instruction::Adrt::AT => self.OP = unsafe { mem.get_raw(self.IR.inner.adr_val() as u16) as i16 },
-                crate::instruction::Adrt::STAR => self.OP = unsafe { mem.get_raw(mem.get_raw(self.IR.inner.adr_val() as u16)) as i16 },
+                crate::instruction::Adrt::STAR => self.OP = unsafe { mem.get_raw(mem.get_raw(self.IR.inner.adr() as u16)) as i16 },
                 crate::instruction::Adrt::PLUS => self.OP = unsafe { mem.get_raw((self.AC + self.IR.inner.adr_val()) as u16) as i16 },
             }
             match unsafe { self.IR.inner.code() } {
@@ -72,7 +87,9 @@ impl PROC {
                 crate::instruction::Code::SHR => self.AC = self.AC >> self.OP,
             }
             if interactive {
-                println!("PC={}, AC={}", self.PC, self.AC);
+                println!("  PC={}, AC={}", self.PC, self.AC);
+                println!("");
+                if disable_interactive { interactive = false; }
             }
         }
         if interactive {
@@ -95,7 +112,7 @@ impl MEM {
         if i >= 512 {
             panic!("Adress out of bounds. Tried to access memory at index: {}", i);
         }
-        if interactive { println!("Modified MEM[{}] = {}", i, val); }
+        if interactive { println!("  Modified MEM[{}] = {}", i, val); }
         self.inner[i as usize] = Instruction { raw: val };    
     }
 
