@@ -1,0 +1,22 @@
+0: LOAD . 0
+1: STORE . 19
+2: LOAD . 21
+3: STORE . 18
+4: SUB . 21
+5: SUB @ 20
+6: JZERO . 14
+7: LOAD @ 19
+8: ADD * 18
+9: STORE . 19
+10: LOAD @ 18
+11: ADD . 1
+12: STORE . 18
+13: JUMP . 4
+14: STOP . 0
+18: 0 //adres aktualnego elementu
+19: 0 //wynik sumy
+20: 4 //liczba elementów
+21: 100
+22: 20
+23: 30
+24: 50

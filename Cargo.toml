@@ -1,0 +1,9 @@
+[package]
+name = "pmc-interpreter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bitfield-struct = "0.9"
+clap = { version = "4.5.20", features = ["derive"] }
+crossterm = "*"
