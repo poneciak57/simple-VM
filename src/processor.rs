@@ -1,6 +1,5 @@
-use std::{fs::OpenOptions, io::{self, Read}};
+use std::{fs::OpenOptions, io::{self}};
 use std::io::Write;
-use crossterm::terminal;
 
 use crate::instruction::{Code, Instruction};
 
@@ -22,45 +21,55 @@ impl PROC {
 
     pub fn run(&mut self, mem: &mut MEM, mut interactive: bool) {
         if interactive {
-            terminal::enable_raw_mode().expect("Expected enabling raw mode");
-            println!("Welcome to interactive mode press 'h' for more info");
-            println!("Current command is only displayed to you. It will be runned after you press 'n'");
+            println!("_________  ________   _   ____  ___");
+            println!("| ___ \\  \\/  /  __ \\ | | | |  \\/  |");
+            println!("| |_/ / .  . | /  \\/ | | | | .  . |");
+            println!("|  __/| |\\/| | |     | | | | |\\/| |");
+            println!("| |   | |  | | \\__/\\ \\ \\_/ / |  | |");
+            println!("\\_|   \\_|  |_\\/____/  \\___/|_|  |_| by poneciak");
+            println!("Welcome to interactive mode type 'h' for more info");
+            println!("Every command is displayed before execution to execute visible step type 'n' ");
+            println!("");
         }
         let mut mem_snap_c = 0;
-        let mut disable_interactive = false;
         'main: loop {
             self.IR = mem.get(self.PC);
             self.PC += 1;
             if interactive {
                 loop {
                     unsafe {
-                        println!("> {}: {:?} {:?} {} AC={}", self.PC - 1, self.IR.inner.code(), self.IR.inner.adrt(), self.IR.inner.adr(), self.AC);
+                        println!("{}: {:?} {:?} {} AC={}", self.PC - 1, self.IR.inner.code(), self.IR.inner.adrt(), self.IR.inner.adr(), self.AC);
                     }
-                    let input = read_char().expect("Expected char read");
-                    match input {
-                        'q' => break 'main,
-                        'n' => break, // continues execution
-                        'm' => {
-                            println!("  Created memory snapshot in 'mem{}.snap", mem_snap_c);
+                    print!("> ");
+                    io::stdout().flush().unwrap();
+                    let input = read_cmd();
+                    match &*input {
+                        "q" | "quit" => break 'main,
+                        "n" | "next" => break, // continues execution
+                        "m" => {
+                            println!("{:<2}Created memory snapshot in 'mem{}.snap", "", mem_snap_c);
+                            println!("");
                             mem_snap_c += 1;
                             mem.dump_all(Some(format!("mem{}.snap", mem_snap_c)));
                             continue;
                         }
-                        'f' => {
-                            disable_interactive = true;
+                        "f" | "finish" => {
+                            interactive = false;
                             break
                         }
-                        'h' => {
-                            println!("h - print help message");
-                            println!("q - quit interactive mode");
-                            println!("n - forward program execution");
-                            println!("f - finish program execution without interactive mode");
+                        "h" | "help" => {
+                            println!("{:<2}h | help - print help message", "");
+                            println!("{:<2}q | quit - quit interactive mode", "");
+                            println!("{:<2}n | next - forward program execution", "");
+                            println!("{:<2}f | finish - finish program execution without interactive mode", "");
+                            println!("{:<2}m - makes snapshot of memory in mem.snap file", "");
+                            println!("");
                         }
                         _ => println!("Unknown command. Press 'h' for help")
                     }
                 }
                 unsafe {
-                    println!("  executing {}: {:?} {:?} {} AC={}", self.PC - 1, self.IR.inner.code(), self.IR.inner.adrt(), self.IR.inner.adr(), self.AC);
+                    println!("{:<2}executing {}: {:?} {:?} {} AC={}", "", self.PC - 1, self.IR.inner.code(), self.IR.inner.adrt(), self.IR.inner.adr(), self.AC);
                 }
             }
             match unsafe { self.IR.inner.adrt() } {
@@ -87,13 +96,9 @@ impl PROC {
                 crate::instruction::Code::SHR => self.AC = self.AC >> self.OP,
             }
             if interactive {
-                println!("  PC={}, AC={}", self.PC, self.AC);
+                println!("{:<2}PC={}, AC={}", "", self.PC, self.AC);
                 println!("");
-                if disable_interactive { interactive = false; }
             }
-        }
-        if interactive {
-            terminal::disable_raw_mode().expect("Expected disabling raw mode");
         }
     }
 }
@@ -112,7 +117,7 @@ impl MEM {
         if i >= 512 {
             panic!("Adress out of bounds. Tried to access memory at index: {}", i);
         }
-        if interactive { println!("  Modified MEM[{}] = {}", i, val); }
+        if interactive { println!("{:<2}Modified MEM[{}] = {}", "", i, val); }
         self.inner[i as usize] = Instruction { raw: val };    
     }
 
@@ -162,8 +167,8 @@ impl MEM {
 }
 
 
-fn read_char() -> io::Result<char> {
-    let mut buffer: [u8; 1] = [0; 1]; // Buffer to hold one byte
-    io::stdin().read_exact(&mut buffer)?; // Read exactly one byte
-    Ok(buffer[0] as char) // Convert the byte to a char
+fn read_cmd() -> String {
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).expect("Failed to read line");
+    input.trim().to_string()
 }
