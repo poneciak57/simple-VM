@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use clap::{command, Parser};
-use pmc_interpreter::{parser::parse, processor::PROC};
+use pmc_interpreter::{interactive::InteractiveState, parser::parse, processor::PROC};
 
 /// A simple PMC
 #[derive(Parser, Debug)]
@@ -23,7 +23,11 @@ fn main() {
     let mut mem = parse(&content);
     let mut proc = PROC::new();
     // mem.print_range(0..30);
-    proc.run(&mut mem, cli.interactive);
-    mem.dump_all(Some("mem.out".to_string()));
+    let interactive_state = if cli.interactive {
+        InteractiveState::ENABLED
+    } else {
+        InteractiveState::DISABLED
+    };
+    proc.run(&mut mem, interactive_state);
     //mem.dump_all();
 }
